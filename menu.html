@@ -1,0 +1,27 @@
+<html>
+  <head>
+    <script>
+    </script>
+    <style>
+      .projName, a {
+        margin: 3px;
+      }
+    </style>
+    <meta name="viewport" content="width=device-width; initial-scale=1.5;"/>
+  </head> 
+  <body>
+    {% for project in projects %}
+    <span class="projName">
+      {{ project.name|escape }}
+    </span>
+    <a target="_blank" href="/~{{ project.name|escape }}">Edit</a>
+    <a target="_blank" href="/{{ project.name|escape }}">Run</a>
+    <br />
+    {% endfor %}
+    <form action="/" method="post">
+      New File:
+      <input name="n" />
+      <input type="submit" value="Save" />
+    </form>
+  </body>
+</html>

@@ -1,0 +1,161 @@
+<html>
+  <head>
+    <meta name="viewport" content="width=device-width; initial-scale=1.5;"/>
+    <style>
+      body {
+        background-color: #000;
+        margin: 0;
+        padding: 0;
+      }
+
+      #container {
+        height: 100%;
+        width: 100%;
+      }
+
+      #textContainer {
+        box-sizing: border-box;
+        height: 100%;
+      }
+
+      textarea {
+        height: 100%;
+        width: 100%;
+      }
+
+      #bottom {
+        display: none;
+        height: 20px;
+        margin-top: -20px;
+        background-color: #000;
+      }
+
+      .showBottom #bottom {
+        box-orient: horizontal;
+        -moz-box-orient: horizontal;
+        -webkit-box-orient: horizontal;
+        display: -moz-box;
+        display: -webkit-box;
+        display: box;
+      }
+
+      .showBottom #textContainer {
+        padding-bottom: 20px;
+      }
+
+      .bottomKey {
+        box-flex: 1;
+        -moz-box-flex: 1;
+        -webkit-box-flex: 1;
+        text-align: center;
+        background-color: #EEE;
+        border-radius: 5px;
+        border-left: 1px solid #AAA;
+        border-right: 1px solid #AAA;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div id="container" class="showBottom">
+      <div id="textContainer">
+        <textarea id="content" name="content" style="background-color:#FFF;">{{ project.content|escape }}</textarea>
+      </div>
+      <div id="bottom"><div class="bottomKey">{</div><div class="bottomKey">}</div></div>
+    </div>
+  </body>
+  <script>
+    var text = document.getElementById('content');
+    var prev_content = text.value
+    var is_js_filetype = !!/\.js$/.exec(document.URL);
+
+    function onBlur() {
+      if (text.value == prev_content) return;
+      prev_content = text.value;
+      var request = new XMLHttpRequest();
+      var content = encodeURIComponent(text.value);
+      request.open('POST', '~{{ project.name }}', true);
+      request.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+      request.onreadystatechange = function() {
+        if (request.readyState == 4) {
+          if (request.status == 200){
+            text.style.backgroundColor = '#FFF';
+          } else {
+            text.style.backgroundColor = '#F77';
+          }
+        }
+      };
+
+      request.send('content='+content);
+      text.style.backgroundColor = '#CCC';
+    }
+
+    var BACKSPACE = 8;
+    var ENTER = 13;
+    function onKeyUp(e) {
+      if (text.selectionStart != text.selectionEnd) return;
+      if (text.selectionStart == 0) return;
+
+      var key = e.charCode || e.keyCode || e.which;
+      if (key != ENTER) return;
+      var lines = text.value.split("\n");
+      if (lines.length <= 1) return;
+
+      var selected_index = -1;
+      var cumulative_length = 0;
+      var is_in_script = is_js_filetype;
+      while (cumulative_length <= text.selectionStart) {
+        // +1 for \n
+        cumulative_length += lines[selected_index + 1].length + 1;
+        selected_index++;
+
+        if (is_js_filetype) continue;
+        var script_index = lines[selected_index].lastIndexOf('<script');
+        var close_script_index = lines[selected_index].lastIndexOf('</script');
+        if (script_index == close_script_index) continue;
+        is_in_script = (script_index > close_script_index);
+      }
+
+      if (!is_in_script) return;
+      if (selected_index == 0) return;
+      var selected_line = lines[selected_index];
+      if (selected_line.length != 0) return;
+
+      var previous_line = lines[selected_index - 1];
+      var previous_indent = indent_level(previous_line);
+
+      var index_in_line =
+        text.selectionStart -
+          (cumulative_length - selected_line.length) + 1;
+      if (index_in_line != 0) return;
+
+      var new_indent = previous_indent;
+      selected_line = '';
+      for (var ii = 0; ii < previous_indent; ii++) {
+        selected_line += ' ';
+      }
+
+      lines[selected_index] = selected_line;
+      var selection_start = text.selectionStart;
+      text.value = lines.join("\n");
+      text.selectionStart = text.selectionEnd = selection_start + new_indent;
+    }
+
+    function indent_level(line) {
+      for (var indent = 0;
+        indent < line.length && line[indent] == ' ';
+        indent++
+      );
+      return indent;
+    }
+
+    text.onblur = onBlur;
+    text.onkeyup = onKeyUp;
+
+
+   /*
+    * upon newline, if prev line doesn't end in a special char,
+    * match indent of previous line.
+    */
+  </script>
+</html>
